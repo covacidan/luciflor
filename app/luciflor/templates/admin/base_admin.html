@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block body_class %}admin{% endblock %}
+{% block subnav %}
+<nav class="subnav" aria-label="Administrare">
+  <div class="subnav-inner">
+    <a href="/admin" class="{{ 'active' if path == '/admin' }}">Panou</a>
+    <a href="/admin/utilizatori" class="{{ 'active' if path.startswith('/admin/utilizatori') }}">Utilizatori</a>
+    <a href="/admin/angajati" class="{{ 'active' if path.startswith('/admin/angajati') }}">Angajați</a>
+    <a href="/admin/comenzi" class="{{ 'active' if path.startswith('/admin/comenzi') }}">Comenzi</a>
+    <a href="/admin/tarlale" class="{{ 'active' if path.startswith('/admin/tarlale') }}">Tarlale</a>
+  </div>
+</nav>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/macros.html" import text_field, checkbox_field, field_error %}
+{% block title %}{{ 'Editare utilizator' if item else 'Utilizator nou' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ 'Utilizator: ' ~ item.username if item else 'Utilizator nou' }}</h1></div>
+</div>
+<form class="card form" method="post" action="{{ '/admin/utilizatori/' ~ item.id if item else '/admin/utilizatori/nou' }}" novalidate>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% if item %}
+    <div class="field"><label>Nume utilizator</label><input type="text" value="{{ form.username }}" disabled></div>
+  {% else %}
+    {{ text_field(form, errors, "username", "Nume utilizator (pentru autentificare)", required=True, autocomplete="off") }}
+  {% endif %}
+  {{ text_field(form, errors, "full_name", "Nume complet", autocomplete="off") }}
+  <div class="field-row">
+    {{ text_field({}, errors, "password", "Parolă nouă" if item else "Parolă", type="password", required=not item, autocomplete="new-password", placeholder="lăsați gol pentru a păstra parola" if item else "") }}
+    {{ text_field({}, errors, "password2", "Confirmare parolă", type="password", required=not item, autocomplete="new-password") }}
+  </div>
+  {{ checkbox_field(form, errors, "is_admin", "Administrator", "Are acces la paginile de administrare.") }}
+  {% if item %}{{ checkbox_field(form, errors, "enabled", "Cont activ") }}{% endif %}
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="/admin/utilizatori">Renunță</a>
+    <button class="btn btn-primary" type="submit">Salvează</button>
+  </div>
+</form>
+{% endblock %}

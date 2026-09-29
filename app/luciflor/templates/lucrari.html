@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import order_card %}
+{% block title %}Lucrări în execuție{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Lucrări în execuție</h1>
+    <p class="muted">{{ total }} lucrări active · {{ counts[statuses[0]] }} noi · {{ counts[statuses[1]] }} în execuție</p>
+  </div>
+  <a class="btn btn-primary" href="/comanda-noua">+ Comandă nouă</a>
+</div>
+
+{% if not groups %}
+  <div class="empty">
+    <p>Nu există lucrări în execuție.</p>
+  </div>
+{% endif %}
+
+{% for group in groups %}
+<section class="tarla-group">
+  <h2 class="tarla-title">
+    {% if group.tarla %}Tarla {{ group.tarla.name }}{% else %}Fără tarla alocată{% endif %}
+    <span class="count">{{ group.orders|length }}</span>
+  </h2>
+  {% if group.tarla and group.tarla.description %}<p class="muted tarla-desc">{{ group.tarla.description }}</p>{% endif %}
+  <div class="card-grid">
+    {% for order in group.orders %}{{ order_card(order) }}{% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

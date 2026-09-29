@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2f4a3d">
+  <title>{% block title %}Luciflor{% endblock %} · Luciflor</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/lucrari">
+        <img src="/static/favicon.svg" alt="" width="28" height="28">
+        <span>Luciflor</span>
+      </a>
+      {% if user %}
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainnav" aria-label="Meniu">
+        <span></span><span></span><span></span>
+      </button>
+      <nav id="mainnav" class="mainnav">
+        {% block nav %}
+        <a href="/lucrari" class="{{ 'active' if path.startswith('/lucrari') }}">Lucrări în execuție</a>
+        <a href="/cauta" class="{{ 'active' if path.startswith('/cauta') }}">Caută comenzi</a>
+        <a href="/comanda-noua" class="{{ 'active' if path.startswith('/comanda-noua') }}">Comandă nouă</a>
+        {% if user.is_admin %}<a href="/admin" class="nav-admin {{ 'active' if path.startswith('/admin') }}">Administrare</a>{% endif %}
+        {% endblock %}
+        <span class="nav-user">
+          <span class="nav-user-name">{{ user.name }}</span>
+          <a href="/logout" class="nav-logout">Ieșire</a>
+        </span>
+      </nav>
+      {% endif %}
+    </div>
+    {% block subnav %}{% endblock %}
+  </header>
+
+  <main class="container">
+    {% for m in messages %}
+      <div class="flash flash-{{ m.kind }}" role="status">{{ m.message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    (function () {
+      var btn = document.querySelector('.menu-toggle');
+      var nav = document.getElementById('mainnav');
+      if (btn && nav) btn.addEventListener('click', function () {
+        var open = nav.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.querySelectorAll('form[data-confirm]').forEach(function (f) {
+        f.addEventListener('submit', function (e) {
+          if (!confirm(f.getAttribute('data-confirm'))) e.preventDefault();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

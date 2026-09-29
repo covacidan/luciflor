@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import status_badge, yesno %}
+{% block title %}Comanda {{ order.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Comanda {{ order.number }}</h1>
+    <p class="muted">Înregistrată {{ order.created_at|dt }}{% if order.created_by %} de {{ order.created_by }}{% endif %}</p>
+  </div>
+  {% if user.is_admin %}<a class="btn btn-ghost" href="/admin/comenzi/{{ order.id }}">Editează</a>{% endif %}
+</div>
+
+<div class="card">
+  <dl class="details">
+    <div><dt>Status</dt><dd>{{ status_badge(order.status) }}</dd></div>
+    <div><dt>Tarla</dt><dd>{{ order.tarla.name if order.tarla else '—' }}</dd></div>
+    <div><dt>Client</dt><dd>{{ order.client_name }}</dd></div>
+    <div><dt>Telefon</dt><dd><a href="tel:{{ order.client_phone_digits }}">{{ order.client_phone }}</a></dd></div>
+    <div class="wide"><dt>Adresă</dt><dd class="pre">{{ order.client_address }}</dd></div>
+    <div><dt>Necesită factură</dt><dd>{{ yesno(order.invoice_required) }}</dd></div>
+    <div><dt>Factură achitată</dt><dd>{{ yesno(order.invoice_paid) }}</dd></div>
+  </dl>
+</div>
+
+{% if order.workflow_step == 1 %}
+<div class="notice">Pasul 1 (date client) este complet. Pașii următori ai comenzii vor fi adăugați aici.</div>
+{% endif %}
+{% endblock %}

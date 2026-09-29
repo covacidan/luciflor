@@ -1,0 +1,20 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/macros.html" import text_field, textarea_field, checkbox_field %}
+{% block title %}{{ 'Editare angajat' if item else 'Angajat nou' }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ item.name if item else 'Angajat nou' }}</h1></div></div>
+<form class="card form" method="post" action="{{ '/admin/angajati/' ~ item.id if item else '/admin/angajati/nou' }}" novalidate>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ text_field(form, errors, "name", "Nume", required=True) }}
+  <div class="field-row">
+    {{ text_field(form, errors, "phone", "Telefon", type="tel", inputmode="tel") }}
+    {{ text_field(form, errors, "job_title", "Funcție", placeholder="ex. pietrar, zidar, șofer") }}
+  </div>
+  {{ textarea_field(form, errors, "notes", "Observații") }}
+  {{ checkbox_field(form, errors, "active", "Activ") }}
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="/admin/angajati">Renunță</a>
+    <button class="btn btn-primary" type="submit">Salvează</button>
+  </div>
+</form>
+{% endblock %}

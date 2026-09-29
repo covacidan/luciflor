@@ -1,0 +1,11 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Administrare{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Administrare</h1></div></div>
+<div class="stat-grid">
+  <a class="stat" href="/admin/comenzi"><span class="stat-value">{{ stats.comenzi_active }}</span><span class="stat-label">Comenzi active</span></a>
+  <a class="stat" href="/admin/comenzi"><span class="stat-value">{{ stats.comenzi }}</span><span class="stat-label">Comenzi în total</span></a>
+  <a class="stat" href="/admin/angajati"><span class="stat-value">{{ stats.angajati }}</span><span class="stat-label">Angajați activi</span></a>
+  <a class="stat" href="/admin/tarlale"><span class="stat-value">{{ stats.tarlale }}</span><span class="stat-label">Tarlale</span></a>
+</div>
+{% endblock %}

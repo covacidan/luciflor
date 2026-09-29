@@ -1,0 +1,66 @@
+{% macro status_badge(status) -%}
+<span class="badge badge-{{ status.value }}">{{ status.label }}</span>
+{%- endmacro %}
+
+{% macro yesno(value) -%}
+{% if value %}<span class="yn yn-yes">Da</span>{% else %}<span class="yn yn-no">Nu</span>{% endif %}
+{%- endmacro %}
+
+{% macro field_error(errors, name) -%}
+{% if errors.get(name) %}<p class="field-error">{{ errors[name] }}</p>{% endif %}
+{%- endmacro %}
+
+{% macro text_field(form, errors, name, label, type="text", required=False, autocomplete="off", inputmode=None, placeholder="") -%}
+<div class="field {{ 'has-error' if errors.get(name) }}">
+  <label for="{{ name }}">{{ label }}{% if required %} <span class="req">*</span>{% endif %}</label>
+  <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ form.get(name) or '' }}"
+         autocomplete="{{ autocomplete }}" {% if inputmode %}inputmode="{{ inputmode }}"{% endif %}
+         {% if placeholder %}placeholder="{{ placeholder }}"{% endif %} {% if required %}required{% endif %}>
+  {{ field_error(errors, name) }}
+</div>
+{%- endmacro %}
+
+{% macro textarea_field(form, errors, name, label, required=False, rows=3) -%}
+<div class="field {{ 'has-error' if errors.get(name) }}">
+  <label for="{{ name }}">{{ label }}{% if required %} <span class="req">*</span>{% endif %}</label>
+  <textarea id="{{ name }}" name="{{ name }}" rows="{{ rows }}" {% if required %}required{% endif %}>{{ form.get(name) or '' }}</textarea>
+  {{ field_error(errors, name) }}
+</div>
+{%- endmacro %}
+
+{% macro yesno_field(form, errors, name, label) -%}
+<fieldset class="field segmented {{ 'has-error' if errors.get(name) }}">
+  <legend>{{ label }} <span class="req">*</span></legend>
+  <div class="segmented-options">
+    <label><input type="radio" name="{{ name }}" value="da" required {{ 'checked' if form.get(name) == 'da' }}><span>Da</span></label>
+    <label><input type="radio" name="{{ name }}" value="nu" required {{ 'checked' if form.get(name) == 'nu' }}><span>Nu</span></label>
+  </div>
+  {{ field_error(errors, name) }}
+</fieldset>
+{%- endmacro %}
+
+{% macro checkbox_field(form, errors, name, label, hint="") -%}
+<div class="field check {{ 'has-error' if errors.get(name) }}">
+  <label><input type="checkbox" name="{{ name }}" {{ 'checked' if form.get(name) }}> {{ label }}</label>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+  {{ field_error(errors, name) }}
+</div>
+{%- endmacro %}
+
+{% macro order_card(order, admin=False) -%}
+<a class="order-card" href="{{ '/admin/comenzi/' ~ order.id if admin else '/comenzi/' ~ order.id }}">
+  <div class="order-card-head">
+    <span class="order-no">{{ order.number }}</span>
+    {{ status_badge(order.status) }}
+  </div>
+  <div class="order-client">{{ order.client_name }}</div>
+  <div class="order-meta">
+    <span>{{ order.client_phone }}</span>
+    {% if order.tarla %}<span>Tarla {{ order.tarla.name }}</span>{% endif %}
+  </div>
+  <div class="order-meta muted">
+    <span>Factură: {{ 'da' if order.invoice_required else 'nu' }}{% if order.invoice_required %}, {{ 'achitată' if order.invoice_paid else 'neachitată' }}{% endif %}</span>
+    <span>{{ order.created_at|dt }}</span>
+  </div>
+</a>
+{%- endmacro %}

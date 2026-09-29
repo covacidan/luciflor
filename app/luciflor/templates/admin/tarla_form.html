@@ -1,0 +1,15 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/macros.html" import text_field, textarea_field %}
+{% block title %}{{ 'Editare tarla' if item else 'Tarla nouă' }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ 'Tarla ' ~ item.name if item else 'Tarla nouă' }}</h1></div></div>
+<form class="card form" method="post" action="{{ '/admin/tarlale/' ~ item.id if item else '/admin/tarlale/nou' }}" novalidate>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ text_field(form, errors, "name", "Denumire", required=True, placeholder="ex. 12, A3, Parcela Nord") }}
+  {{ textarea_field(form, errors, "description", "Descriere") }}
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="/admin/tarlale">Renunță</a>
+    <button class="btn btn-primary" type="submit">Salvează</button>
+  </div>
+</form>
+{% endblock %}

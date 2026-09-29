@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import order_card %}
+{% block title %}Caută comenzi{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Caută comenzi</h1>
+    <p class="muted">După numele clientului sau numărul de telefon.</p>
+  </div>
+</div>
+
+<form class="searchbar" method="get" action="/cauta" role="search">
+  <input type="search" name="q" value="{{ q }}" placeholder="ex. Popescu sau 0722 123 456"
+         aria-label="Nume sau telefon" autofocus autocomplete="off">
+  <button class="btn btn-primary" type="submit">Caută</button>
+</form>
+
+{% if searched %}
+  <p class="muted result-count">{{ results|length }} rezultat{{ 'e' if results|length != 1 }} pentru „{{ q }}”</p>
+  {% if results %}
+    <div class="card-grid">
+      {% for order in results %}{{ order_card(order) }}{% endfor %}
+    </div>
+  {% else %}
+    <div class="empty"><p>Nicio comandă găsită.</p></div>
+  {% endif %}
+{% elif q %}
+  <p class="muted">Introduceți cel puțin 2 caractere.</p>
+{% endif %}
+{% endblock %}

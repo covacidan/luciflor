@@ -1,0 +1,31 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Tarlale{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Tarlale</h1><p class="muted">Zonele din cimitir după care se grupează comenzile.</p></div>
+  <a class="btn btn-primary" href="/admin/tarlale/nou">+ Tarla nouă</a>
+</div>
+{% if rows %}
+<table class="table">
+  <thead><tr><th>Denumire</th><th>Descriere</th><th>Comenzi</th><th></th></tr></thead>
+  <tbody>
+  {% for t, count in rows %}
+    <tr>
+      <td data-label="Denumire"><strong>{{ t.name }}</strong></td>
+      <td data-label="Descriere">{{ t.description or '—' }}</td>
+      <td data-label="Comenzi">{{ count }}</td>
+      <td class="actions">
+        <a class="btn btn-small" href="/admin/tarlale/{{ t.id }}">Editează</a>
+        <form method="post" action="/admin/tarlale/{{ t.id }}/sterge" data-confirm="Ștergeți tarlaua {{ t.name }}?{% if count %} Cele {{ count }} comenzi vor rămâne fără tarla.{% endif %}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn btn-small btn-danger" type="submit">Șterge</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty"><p>Nu există tarlale. Adăugați prima tarla.</p></div>
+{% endif %}
+{% endblock %}
