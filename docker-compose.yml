@@ -51,7 +51,7 @@ services:
       # Imported only when the realm does not exist yet (first start).
       - ./config/keycloak:/opt/keycloak/data/import:ro
     ports:
-      - "${KEYCLOAK_PORT:-8080}:8080"
+      - "${KEYCLOAK_PORT:-8081}:8081"
     depends_on:
       postgres:
         condition: service_healthy
