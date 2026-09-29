@@ -51,7 +51,7 @@ services:
       # Imported only when the realm does not exist yet (first start).
       - ./config/keycloak:/opt/keycloak/data/import:ro
     ports:
-      - "${KEYCLOAK_PORT:-8081}:8081"
+      - "${KEYCLOAK_PORT:-8080}:8083"
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,8 +75,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-luciflor}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-luciflor}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8000}
-      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8083}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8083
       KEYCLOAK_REALM: luciflor
       KEYCLOAK_CLIENT_ID: luciflor-web
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
