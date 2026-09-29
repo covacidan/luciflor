@@ -42,10 +42,10 @@ class Settings:
 def load_settings() -> Settings:
     return Settings(
         database_url=os.environ["DATABASE_URL"],
-        app_public_url=os.environ.get("APP_PUBLIC_URL", "http://localhost:8000"),
-        keycloak_public_url=os.environ.get("KEYCLOAK_PUBLIC_URL", "http://localhost:8080"),
+        app_public_url=os.environ.get("APP_PUBLIC_URL", "http://localhost:8211"),
+        keycloak_public_url=os.environ.get("KEYCLOAK_PUBLIC_URL", "http://localhost:8210"),
         keycloak_internal_url=os.environ.get(
-            "KEYCLOAK_INTERNAL_URL", os.environ.get("KEYCLOAK_PUBLIC_URL", "http://localhost:8080")
+            "KEYCLOAK_INTERNAL_URL", os.environ.get("KEYCLOAK_PUBLIC_URL", "http://localhost:8210")
         ),
         keycloak_realm=os.environ.get("KEYCLOAK_REALM", "luciflor"),
         keycloak_client_id=os.environ.get("KEYCLOAK_CLIENT_ID", "luciflor-web"),

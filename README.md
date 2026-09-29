@@ -16,8 +16,8 @@ cp .env.example .env        # then replace every change-me value (openssl rand -
 docker compose up -d --build
 ```
 
-- Website: http://localhost:8000 — log in with **admin / admin** (change it from *Administrare → Utilizatori*).
-- Keycloak console: http://localhost:8080 — master-realm admin from `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD`.
+- Website: http://localhost:8211 — log in with **admin / admin** (change it from *Administrare → Utilizatori*).
+- Keycloak console: http://localhost:8210 — master-realm admin from `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD`.
 
 First start takes ~1 minute while Keycloak builds and imports the realm; `web` waits for it to be healthy.
 
@@ -42,7 +42,7 @@ First start takes ~1 minute while Keycloak builds and imports the realm; `web` w
 | `config/keycloak/luciflor-realm.json` | Realm `luciflor`: `admin` role, `luciflor-web` client, admin user, service-account permissions. Imported only on first start; values like `${APP_PUBLIC_URL}` come from the environment. |
 | `config/postgres/init-databases.sh` | Creates the Keycloak database/user and the `unaccent` extension on first start of an empty volume. |
 
-**Two URLs for Keycloak.** The browser uses `KEYCLOAK_PUBLIC_URL`; the web container talks to Keycloak directly at `http://keycloak:8080`. Tokens are always issued with the public URL, and the app verifies that issuer.
+**Two URLs for Keycloak.** The browser uses `KEYCLOAK_PUBLIC_URL`; the web container talks to Keycloak directly at `http://keycloak:8210`. Tokens are always issued with the public URL, and the app verifies that issuer.
 
 **Deploying on a server.** Put a TLS reverse proxy (Caddy, Traefik, nginx) in front of both `web` and `keycloak`, then in `.env` set `APP_PUBLIC_URL` and `KEYCLOAK_PUBLIC_URL` to the https URLs, `SESSION_HTTPS_ONLY=true` and `KC_SSL_REQUIRED=all`. Because the realm is only imported once, if you change `APP_PUBLIC_URL` after the first start, update the client's redirect URIs in the Keycloak console (or run `docker compose down -v` on a fresh install to re-import).
 
@@ -52,7 +52,7 @@ First start takes ~1 minute while Keycloak builds and imports the realm; `web` w
 cd app
 python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
 export DATABASE_URL=postgresql+psycopg://luciflor:PASS@localhost:5432/luciflor \
-       KEYCLOAK_PUBLIC_URL=http://localhost:8080 KEYCLOAK_CLIENT_SECRET=... SESSION_SECRET=dev
+       KEYCLOAK_PUBLIC_URL=http://localhost:8210 KEYCLOAK_CLIENT_SECRET=... SESSION_SECRET=dev
 uvicorn luciflor.main:app --reload
 ```
 
