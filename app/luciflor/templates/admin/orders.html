@@ -13,14 +13,14 @@
 </form>
 {% if items %}
 <table class="table">
-  <thead><tr><th>Nr.</th><th>Client</th><th>Telefon</th><th>Tarla</th><th>Status</th><th>Data</th><th></th></tr></thead>
+  <thead><tr><th>Nr.</th><th>Client</th><th>Telefon</th><th>Locație</th><th>Status</th><th>Data</th><th></th></tr></thead>
   <tbody>
   {% for o in items %}
     <tr>
       <td data-label="Nr."><strong>{{ o.number }}</strong></td>
       <td data-label="Client">{{ o.client_name }}</td>
       <td data-label="Telefon">{{ o.client_phone }}</td>
-      <td data-label="Tarla">{{ o.tarla.name if o.tarla else '—' }}</td>
+      <td data-label="Locație">{% if o.parcela %}F {{ o.parcela.figura.name }} / P {{ o.parcela.name }}{% if o.loc %} / L {{ o.loc }}{% endif %}{% else %}—{% endif %}</td>
       <td data-label="Status">{{ status_badge(o.status) }}</td>
       <td data-label="Data">{{ o.created_at|dt }}</td>
       <td class="actions"><a class="btn btn-small" href="/admin/comenzi/{{ o.id }}">Editează</a></td>

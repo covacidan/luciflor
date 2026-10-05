@@ -1,6 +1,6 @@
 # Luciflor
 
-Order management website for Luciflor: work in progress grouped by *tarla*, order search,
+Order management website for Luciflor: work in progress grouped by *figura* / *parcela*, order search,
 a new-order workflow, and an admin area. Runs as a Docker Compose stack:
 
 | Service    | Image                            | Role                                        |
@@ -24,15 +24,15 @@ First start takes ~1 minute while Keycloak builds and imports the realm; `web` w
 ## Pages
 
 **Website** (any logged-in user)
-- `/lucrari` — *Lucrări în execuție*: orders with status *Nouă* or *În execuție*, grouped by tarla (orders without a tarla are listed last).
+- `/lucrari` — *Lucrări în execuție*: orders with status *Nouă* or *În execuție*, grouped by figura, then parcela, sorted by loc (orders without a location are listed last).
 - `/cauta` — *Caută comenzi*: search by client name (case- and diacritics-insensitive, `stefan` finds `Ștefan`) or by phone number (any formatting).
 - `/comanda-noua` — *Comandă nouă*, step 1: client name, phone, address, invoice required (da/nu), invoice paid (da/nu). The order is saved with status *Nouă* and `workflow_step = 1`; later steps will continue from there.
 
 **Administrare** (`/admin`, users with the `admin` realm role)
 - *Utilizatori* — create / edit / delete website users (username, full name, password, admin flag, enabled). Users live in Keycloak; the app manages them through the Keycloak Admin API using the `luciflor-web` client's service account.
 - *Angajați* — CRUD for employees (name, phone, job title, active, notes).
-- *Comenzi* — list/filter orders; edit client name and address, plus tarla and status.
-- *Tarlale* — create any number of tarlale. Deleting one keeps its orders (they become "fără tarla").
+- *Comenzi* — list/filter orders; edit client name and address, plus location (figura / parcela from a list, loc typed in) and status.
+- *Figuri* — manage figuri and their parcele. Codes are alphanumeric (letters and digits, no spaces); a parcela code is unique within its figura. Loc is entered per order. Deleting a figura or parcela keeps its orders, which lose their location.
 
 ## Configuration
 
@@ -72,7 +72,7 @@ app/
     main.py            app, sessions, error handling
     auth.py            OIDC login (code + PKCE), guards
     keycloak_admin.py  user management via Keycloak Admin API
-    models.py          Tarla, Employee, Order
+    models.py          Figura, Parcela, Employee, Order
     routes_public.py   website pages
     routes_admin.py    admin pages
     templates/, static/

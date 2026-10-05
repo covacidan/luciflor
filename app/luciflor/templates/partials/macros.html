@@ -47,7 +47,7 @@
 </div>
 {%- endmacro %}
 
-{% macro order_card(order, admin=False) -%}
+{% macro order_card(order, admin=False, loc_only=False) -%}
 <a class="order-card" href="{{ '/admin/comenzi/' ~ order.id if admin else '/comenzi/' ~ order.id }}">
   <div class="order-card-head">
     <span class="order-no">{{ order.number }}</span>
@@ -56,7 +56,8 @@
   <div class="order-client">{{ order.client_name }}</div>
   <div class="order-meta">
     <span>{{ order.client_phone }}</span>
-    {% if order.tarla %}<span>Tarla {{ order.tarla.name }}</span>{% endif %}
+    {% if loc_only %}{% if order.loc %}<span>Loc {{ order.loc }}</span>{% endif %}
+    {% elif order.parcela %}<span>F {{ order.parcela.figura.name }} / P {{ order.parcela.name }}{% if order.loc %} / L {{ order.loc }}{% endif %}</span>{% endif %}
   </div>
   <div class="order-meta muted">
     <span>Factură: {{ 'da' if order.invoice_required else 'nu' }}{% if order.invoice_required %}, {{ 'achitată' if order.invoice_paid else 'neachitată' }}{% endif %}</span>

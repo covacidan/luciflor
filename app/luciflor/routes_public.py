@@ -5,10 +5,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from . import auth
 from .db import get_db
-from .models import ACTIVE_STATUSES, Order, OrderStatus, phone_digits
+from .models import ACTIVE_STATUSES, Order, OrderStatus, Parcela, natural_key, phone_digits
 from .web import clean, flash, form_bool, render, verify_csrf
 
 router = APIRouter()
+
+# Eager-load the figura/parcela of each order (used for grouping and display).
+WITH_LOCATION = joinedload(Order.parcela).joinedload(Parcela.figura)
 
 
 def order_search_conditions(q: str) -> list:
@@ -54,22 +57,28 @@ def home():
 def lucrari(request: Request, db: Session = Depends(get_db), user=Depends(auth.require_user)):
     orders = db.scalars(
         select(Order)
-        .options(joinedload(Order.tarla))
+        .options(WITH_LOCATION)
         .where(Order.status.in_(ACTIVE_STATUSES))
         .order_by(Order.created_at)
     ).all()
 
-    groups: dict[int | None, dict] = {}
+    # Group by figura, then by parcela within it; orders without a location come last.
+    figuri: dict[int | None, dict] = {}
     for order in orders:
-        key = order.tarla_id
-        if key not in groups:
-            groups[key] = {"tarla": order.tarla, "orders": []}
-        groups[key]["orders"].append(order)
+        figura = order.parcela.figura if order.parcela else None
+        fgroup = figuri.setdefault(figura.id if figura else None,
+                                   {"figura": figura, "parcele": {}, "total": 0})
+        pgroup = fgroup["parcele"].setdefault(order.parcela_id, {"parcela": order.parcela, "orders": []})
+        pgroup["orders"].append(order)
+        fgroup["total"] += 1
 
-    # Named tarlale alphabetically, unassigned orders last.
+    for fgroup in figuri.values():
+        fgroup["parcele"] = sorted(fgroup["parcele"].values(), key=lambda g: natural_key(g["parcela"].name if g["parcela"] else ""))
+        for pgroup in fgroup["parcele"]:
+            pgroup["orders"].sort(key=lambda o: (natural_key(o.loc), o.created_at))
     ordered = sorted(
-        groups.values(),
-        key=lambda g: (g["tarla"] is None, (g["tarla"].name.lower() if g["tarla"] else "")),
+        figuri.values(),
+        key=lambda g: (g["figura"] is None, natural_key(g["figura"].name if g["figura"] else "")),
     )
     counts = {s: sum(1 for o in orders if o.status == s) for s in ACTIVE_STATUSES}
     return render(request, "lucrari.html", groups=ordered, total=len(orders), counts=counts)
@@ -83,7 +92,7 @@ def cauta(request: Request, q: str = "", db: Session = Depends(get_db), user=Dep
         conditions = order_search_conditions(q)
         results = db.scalars(
             select(Order)
-            .options(joinedload(Order.tarla))
+            .options(WITH_LOCATION)
             .where(or_(*conditions))
             .order_by(Order.created_at.desc())
             .limit(200)

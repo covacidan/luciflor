@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, selectinload
 
 from . import auth, keycloak_admin as kc
 from .db import get_db
-from .models import Employee, Order, OrderStatus, Tarla
-from .routes_public import order_search_conditions
+from .models import CODE_MAX_LEN, Employee, Figura, Order, OrderStatus, Parcela, natural_key, valid_code
+from .routes_public import WITH_LOCATION, order_search_conditions
 from .web import clean, flash, render, verify_csrf
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(auth.require_admin)])
@@ -26,7 +26,8 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             Order.status.in_([OrderStatus.noua, OrderStatus.in_executie]))),
         "comenzi": db.scalar(select(func.count()).select_from(Order)),
         "angajati": db.scalar(select(func.count()).select_from(Employee).where(Employee.active.is_(True))),
-        "tarlale": db.scalar(select(func.count()).select_from(Tarla)),
+        "figuri": db.scalar(select(func.count()).select_from(Figura)),
+        "parcele": db.scalar(select(func.count()).select_from(Parcela)),
     }
     return render(request, "admin/dashboard.html", stats=stats)
 
@@ -182,7 +183,7 @@ def employee_delete(item_id: int, request: Request, db: Session = Depends(get_db
 
 @router.get("/comenzi")
 def orders_list(request: Request, q: str = "", status: str = "", db: Session = Depends(get_db)):
-    stmt = select(Order).options(joinedload(Order.tarla)).order_by(Order.created_at.desc()).limit(300)
+    stmt = select(Order).options(WITH_LOCATION).order_by(Order.created_at.desc()).limit(300)
     q = q.strip()
     if q:
         stmt = stmt.where(or_(*order_search_conditions(q)))
@@ -192,15 +193,27 @@ def orders_list(request: Request, q: str = "", status: str = "", db: Session = D
     return render(request, "admin/orders.html", items=items, q=q, status=status)
 
 
+CODE_ERROR = f"Doar litere și cifre, fără spații (maxim {CODE_MAX_LEN} caractere)."
+
+
+def _figuri_with_parcele(db: Session) -> list[Figura]:
+    """All figuri with their parcele, in natural order (for the order form's parcela picker)."""
+    figuri = sorted(db.scalars(select(Figura).options(selectinload(Figura.parcele))).all(),
+                    key=lambda f: natural_key(f.name))
+    for f in figuri:
+        f.parcele.sort(key=lambda p: natural_key(p.name))
+    return figuri
+
+
 @router.get("/comenzi/{item_id}")
 def order_edit(item_id: int, request: Request, db: Session = Depends(get_db)):
     item = db.get(Order, item_id)
     if not item:
         return _not_found(request, "Comandă")
-    tarlale = db.scalars(select(Tarla).order_by(Tarla.name)).all()
     form = {"client_name": item.client_name, "client_address": item.client_address,
-            "tarla_id": item.tarla_id, "status": item.status.value}
-    return render(request, "admin/order_form.html", item=item, form=form, tarlale=tarlale, errors={})
+            "parcela_id": item.parcela_id, "loc": item.loc or "", "status": item.status.value}
+    return render(request, "admin/order_form.html", item=item, form=form, figuri=_figuri_with_parcele(db),
+                  errors={})
 
 
 @router.post("/comenzi/{item_id}", dependencies=csrf)
@@ -209,9 +222,10 @@ async def order_update(item_id: int, request: Request, db: Session = Depends(get
     if not item:
         return _not_found(request, "Comandă")
     data = await request.form()
-    tarla_raw = clean(data.get("tarla_id"))
+    parcela_raw = clean(data.get("parcela_id"))
     form = {"client_name": clean(data.get("client_name")), "client_address": clean(data.get("client_address")),
-            "tarla_id": int(tarla_raw) if tarla_raw.isdigit() else None, "status": clean(data.get("status"))}
+            "parcela_id": int(parcela_raw) if parcela_raw.isdigit() else None,
+            "loc": clean(data.get("loc")), "status": clean(data.get("status"))}
     errors = {}
     if not form["client_name"]:
         errors["client_name"] = "Numele este obligatoriu."
@@ -219,80 +233,155 @@ async def order_update(item_id: int, request: Request, db: Session = Depends(get
         errors["client_address"] = "Adresa este obligatorie."
     if form["status"] not in OrderStatus.__members__:
         errors["status"] = "Status invalid."
-    if form["tarla_id"] and not db.get(Tarla, form["tarla_id"]):
-        errors["tarla_id"] = "Tarla inexistentă."
+    if form["parcela_id"] and not db.get(Parcela, form["parcela_id"]):
+        errors["parcela_id"] = "Parcelă inexistentă."
+    if form["loc"]:
+        if not form["parcela_id"]:
+            errors["loc"] = "Alegeți întâi figura / parcela."
+        elif not valid_code(form["loc"]):
+            errors["loc"] = CODE_ERROR
     if errors:
-        tarlale = db.scalars(select(Tarla).order_by(Tarla.name)).all()
-        return render(request, "admin/order_form.html", item=item, form=form, tarlale=tarlale,
+        return render(request, "admin/order_form.html", item=item, form=form, figuri=_figuri_with_parcele(db),
                       errors=errors, status_code=422)
     item.client_name = form["client_name"]
     item.client_address = form["client_address"]
-    item.tarla_id = form["tarla_id"]
+    item.parcela_id = form["parcela_id"]
+    item.loc = form["loc"] or None
     item.status = OrderStatus(form["status"])
     db.commit()
     flash(request, f"Comanda {item.number} a fost actualizată.")
     return RedirectResponse("/admin/comenzi", status_code=303)
 
 
-# -------------------------------------------------------------- tarlale ----
+# ------------------------------------------------------- figuri / parcele ----
 
-@router.get("/tarlale")
-def tarlale_list(request: Request, db: Session = Depends(get_db)):
-    rows = db.execute(
-        select(Tarla, func.count(Order.id))
-        .outerjoin(Order, Order.tarla_id == Tarla.id)
-        .group_by(Tarla.id)
-        .order_by(Tarla.name)
-    ).all()
-    return render(request, "admin/tarlale.html", rows=rows)
+def _order_counts_by_parcela(db: Session) -> dict[int, int]:
+    return dict(db.execute(
+        select(Order.parcela_id, func.count(Order.id)).where(Order.parcela_id.is_not(None)).group_by(Order.parcela_id)
+    ).all())
 
 
-@router.get("/tarlale/nou")
-def tarla_new(request: Request):
-    return render(request, "admin/tarla_form.html", item=None, form={}, errors={})
+def _clear_location(db: Session, parcela_ids) -> None:
+    """Orders of a parcela being deleted lose their whole location (parcela and loc)."""
+    db.execute(update(Order).where(Order.parcela_id.in_(parcela_ids)).values(parcela_id=None, loc=None))
 
 
-@router.get("/tarlale/{item_id}")
-def tarla_edit(item_id: int, request: Request, db: Session = Depends(get_db)):
-    item = db.get(Tarla, item_id)
-    if not item:
-        return _not_found(request, "Tarla")
-    form = {"name": item.name, "description": item.description or ""}
-    return render(request, "admin/tarla_form.html", item=item, form=form, errors={})
-
-
-# Decorators apply bottom-up: register "/nou" first so it is not parsed as an item_id.
-@router.post("/tarlale/{item_id}", dependencies=csrf)
-@router.post("/tarlale/nou", dependencies=csrf)
-async def tarla_save(request: Request, item_id: int | None = None, db: Session = Depends(get_db)):
-    item = db.get(Tarla, item_id) if item_id else Tarla()
-    if item is None:
-        return _not_found(request, "Tarla")
-    data = await request.form()
+def _code_form(data) -> tuple[dict, dict]:
     form = {"name": clean(data.get("name")), "description": clean(data.get("description"))}
     errors = {}
     if not form["name"]:
-        errors["name"] = "Denumirea este obligatorie."
+        errors["name"] = "Codul este obligatoriu."
+    elif not valid_code(form["name"]):
+        errors["name"] = CODE_ERROR
+    return form, errors
+
+
+@router.get("/figuri")
+def figuri_list(request: Request, db: Session = Depends(get_db)):
+    counts = _order_counts_by_parcela(db)
+    rows = [(f, sum(counts.get(p.id, 0) for p in f.parcele)) for f in _figuri_with_parcele(db)]
+    return render(request, "admin/figuri.html", rows=rows, counts=counts)
+
+
+@router.get("/figuri/nou")
+def figura_new(request: Request):
+    return render(request, "admin/figura_form.html", item=None, form={}, errors={}, counts={})
+
+
+@router.get("/figuri/{item_id}")
+def figura_edit(item_id: int, request: Request, db: Session = Depends(get_db)):
+    item = db.get(Figura, item_id)
+    if not item:
+        return _not_found(request, "Figura")
+    item.parcele.sort(key=lambda p: natural_key(p.name))
+    form = {"name": item.name, "description": item.description or ""}
+    return render(request, "admin/figura_form.html", item=item, form=form, errors={},
+                  counts=_order_counts_by_parcela(db))
+
+
+# Decorators apply bottom-up: register "/nou" first so it is not parsed as an item_id.
+@router.post("/figuri/{item_id}", dependencies=csrf)
+@router.post("/figuri/nou", dependencies=csrf)
+async def figura_save(request: Request, item_id: int | None = None, db: Session = Depends(get_db)):
+    item = db.get(Figura, item_id) if item_id else Figura()
+    if item is None:
+        return _not_found(request, "Figura")
+    form, errors = _code_form(await request.form())
     if not errors:
         item.name = form["name"]
         item.description = form["description"] or None
         db.add(item)
         try:
             db.commit()
-            flash(request, f"Tarlaua {item.name} a fost salvată.")
-            return RedirectResponse("/admin/tarlale", status_code=303)
+            flash(request, f"Figura {item.name} a fost salvată.")
+            # A new figura goes straight to its page so parcele can be added.
+            return RedirectResponse(f"/admin/figuri/{item.id}" if not item_id else "/admin/figuri", status_code=303)
         except IntegrityError:
             db.rollback()
-            errors["name"] = "Există deja o tarla cu această denumire."
-    return render(request, "admin/tarla_form.html", item=item if item_id else None, form=form,
+            errors["name"] = "Există deja o figură cu acest cod."
+    if item_id:
+        db.refresh(item)
+    return render(request, "admin/figura_form.html", item=item if item_id else None, form=form, errors=errors,
+                  counts=_order_counts_by_parcela(db), status_code=422)
+
+
+@router.post("/figuri/{item_id}/sterge", dependencies=csrf)
+def figura_delete(item_id: int, request: Request, db: Session = Depends(get_db)):
+    item = db.get(Figura, item_id)
+    if item:
+        _clear_location(db, select(Parcela.id).where(Parcela.figura_id == item.id))
+        db.delete(item)
+        db.commit()
+        flash(request, f"Figura {item.name} și parcelele ei au fost șterse. Comenzile lor au rămas fără locație.")
+    return RedirectResponse("/admin/figuri", status_code=303)
+
+
+@router.get("/figuri/{figura_id}/parcele/nou")
+def parcela_new(figura_id: int, request: Request, db: Session = Depends(get_db)):
+    figura = db.get(Figura, figura_id)
+    if not figura:
+        return _not_found(request, "Figura")
+    return render(request, "admin/parcela_form.html", figura=figura, item=None, form={}, errors={})
+
+
+@router.get("/figuri/{figura_id}/parcele/{item_id}")
+def parcela_edit(figura_id: int, item_id: int, request: Request, db: Session = Depends(get_db)):
+    item = db.get(Parcela, item_id)
+    if not item or item.figura_id != figura_id:
+        return _not_found(request, "Parcela")
+    form = {"name": item.name, "description": item.description or ""}
+    return render(request, "admin/parcela_form.html", figura=item.figura, item=item, form=form, errors={})
+
+
+@router.post("/figuri/{figura_id}/parcele/{item_id}", dependencies=csrf)
+@router.post("/figuri/{figura_id}/parcele/nou", dependencies=csrf)
+async def parcela_save(figura_id: int, request: Request, item_id: int | None = None, db: Session = Depends(get_db)):
+    figura = db.get(Figura, figura_id)
+    item = db.get(Parcela, item_id) if item_id else Parcela(figura_id=figura_id)
+    if not figura or item is None or item.figura_id != figura_id:
+        return _not_found(request, "Parcela")
+    form, errors = _code_form(await request.form())
+    if not errors:
+        item.name = form["name"]
+        item.description = form["description"] or None
+        db.add(item)
+        try:
+            db.commit()
+            flash(request, f"Parcela {item.name} din figura {figura.name} a fost salvată.")
+            return RedirectResponse(f"/admin/figuri/{figura_id}", status_code=303)
+        except IntegrityError:
+            db.rollback()
+            errors["name"] = f"Figura {figura.name} are deja o parcelă cu acest cod."
+    return render(request, "admin/parcela_form.html", figura=figura, item=item if item_id else None, form=form,
                   errors=errors, status_code=422)
 
 
-@router.post("/tarlale/{item_id}/sterge", dependencies=csrf)
-def tarla_delete(item_id: int, request: Request, db: Session = Depends(get_db)):
-    item = db.get(Tarla, item_id)
-    if item:
+@router.post("/figuri/{figura_id}/parcele/{item_id}/sterge", dependencies=csrf)
+def parcela_delete(figura_id: int, item_id: int, request: Request, db: Session = Depends(get_db)):
+    item = db.get(Parcela, item_id)
+    if item and item.figura_id == figura_id:
+        _clear_location(db, select(Parcela.id).where(Parcela.id == item.id))
         db.delete(item)
         db.commit()
-        flash(request, f"Tarlaua {item.name} a fost ștearsă. Comenzile ei au rămas fără tarla.")
-    return RedirectResponse("/admin/tarlale", status_code=303)
+        flash(request, f"Parcela {item.name} a fost ștearsă. Comenzile ei au rămas fără locație.")
+    return RedirectResponse(f"/admin/figuri/{figura_id}", status_code=303)

@@ -13,7 +13,9 @@
 <div class="card">
   <dl class="details">
     <div><dt>Status</dt><dd>{{ status_badge(order.status) }}</dd></div>
-    <div><dt>Tarla</dt><dd>{{ order.tarla.name if order.tarla else '—' }}</dd></div>
+    <div><dt>Figura</dt><dd>{{ order.parcela.figura.name if order.parcela else '—' }}</dd></div>
+    <div><dt>Parcela</dt><dd>{{ order.parcela.name if order.parcela else '—' }}</dd></div>
+    <div><dt>Loc</dt><dd>{{ order.loc or '—' }}</dd></div>
     <div><dt>Client</dt><dd>{{ order.client_name }}</dd></div>
     <div><dt>Telefon</dt><dd><a href="tel:{{ order.client_phone_digits }}">{{ order.client_phone }}</a></dd></div>
     <div class="wide"><dt>Adresă</dt><dd class="pre">{{ order.client_address }}</dd></div>

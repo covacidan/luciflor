@@ -11,14 +11,21 @@
   {{ text_field(form, errors, "client_name", "Nume client", required=True) }}
   {{ textarea_field(form, errors, "client_address", "Adresă", required=True) }}
   <div class="field-row">
-    <div class="field {{ 'has-error' if errors.get('tarla_id') }}">
-      <label for="tarla_id">Tarla</label>
-      <select id="tarla_id" name="tarla_id">
-        <option value="">— fără tarla —</option>
-        {% for t in tarlale %}<option value="{{ t.id }}" {{ 'selected' if form.tarla_id == t.id }}>{{ t.name }}</option>{% endfor %}
+    <div class="field {{ 'has-error' if errors.get('parcela_id') }}">
+      <label for="parcela_id">Figura / Parcela</label>
+      <select id="parcela_id" name="parcela_id">
+        <option value="">— fără locație —</option>
+        {% for f in figuri %}{% if f.parcele %}
+        <optgroup label="Figura {{ f.name }}">
+          {% for p in f.parcele %}<option value="{{ p.id }}" {{ 'selected' if form.parcela_id == p.id }}>Figura {{ f.name }} / Parcela {{ p.name }}</option>{% endfor %}
+        </optgroup>
+        {% endif %}{% endfor %}
       </select>
-      {{ field_error(errors, "tarla_id") }}
+      {{ field_error(errors, "parcela_id") }}
     </div>
+    {{ text_field(form, errors, "loc", "Loc", placeholder="ex. 14, 7B") }}
+  </div>
+  <div class="field-row">
     <div class="field {{ 'has-error' if errors.get('status') }}">
       <label for="status">Status</label>
       <select id="status" name="status">

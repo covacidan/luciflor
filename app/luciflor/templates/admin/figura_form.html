@@ -1,0 +1,45 @@
+{% extends "admin/base_admin.html" %}
+{% from "partials/macros.html" import text_field, textarea_field %}
+{% block title %}{{ 'Figura ' ~ item.name if item else 'Figură nouă' }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ 'Figura ' ~ item.name if item else 'Figură nouă' }}</h1></div></div>
+<form class="card form" method="post" action="{{ '/admin/figuri/' ~ item.id if item else '/admin/figuri/nou' }}" novalidate>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ text_field(form, errors, "name", "Cod figură", required=True, placeholder="ex. 12, A3") }}
+  {{ textarea_field(form, errors, "description", "Descriere") }}
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="/admin/figuri">Renunță</a>
+    <button class="btn btn-primary" type="submit">Salvează</button>
+  </div>
+</form>
+
+{% if item %}
+<div class="page-head section-head">
+  <div><h2>Parcele în figura {{ item.name }}</h2></div>
+  <a class="btn btn-primary" href="/admin/figuri/{{ item.id }}/parcele/nou">+ Parcelă nouă</a>
+</div>
+{% if item.parcele %}
+<table class="table">
+  <thead><tr><th>Parcela</th><th>Descriere</th><th>Comenzi</th><th></th></tr></thead>
+  <tbody>
+  {% for p in item.parcele %}
+    <tr>
+      <td data-label="Parcela"><strong>{{ p.name }}</strong></td>
+      <td data-label="Descriere">{{ p.description or '—' }}</td>
+      <td data-label="Comenzi">{{ counts.get(p.id, 0) }}</td>
+      <td class="actions">
+        <a class="btn btn-small" href="/admin/figuri/{{ item.id }}/parcele/{{ p.id }}">Editează</a>
+        <form method="post" action="/admin/figuri/{{ item.id }}/parcele/{{ p.id }}/sterge" data-confirm="Ștergeți parcela {{ p.name }}?{% if counts.get(p.id) %} Cele {{ counts[p.id] }} comenzi vor rămâne fără locație.{% endif %}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn btn-small btn-danger" type="submit">Șterge</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty"><p>Figura nu are încă parcele.</p></div>
+{% endif %}
+{% endif %}
+{% endblock %}

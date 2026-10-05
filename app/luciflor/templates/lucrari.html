@@ -17,15 +17,23 @@
 {% endif %}
 
 {% for group in groups %}
-<section class="tarla-group">
-  <h2 class="tarla-title">
-    {% if group.tarla %}Tarla {{ group.tarla.name }}{% else %}Fără tarla alocată{% endif %}
-    <span class="count">{{ group.orders|length }}</span>
+<section class="figura-group">
+  <h2 class="figura-title">
+    {% if group.figura %}Figura {{ group.figura.name }}{% else %}Fără locație alocată{% endif %}
+    <span class="count">{{ group.total }}</span>
   </h2>
-  {% if group.tarla and group.tarla.description %}<p class="muted tarla-desc">{{ group.tarla.description }}</p>{% endif %}
-  <div class="card-grid">
-    {% for order in group.orders %}{{ order_card(order) }}{% endfor %}
+  {% if group.figura and group.figura.description %}<p class="muted figura-desc">{{ group.figura.description }}</p>{% endif %}
+  {% for pg in group.parcele %}
+  <div class="parcela-group">
+    {% if pg.parcela %}
+    <h3 class="parcela-title">Parcela {{ pg.parcela.name }} <span class="count">{{ pg.orders|length }}</span></h3>
+    {% if pg.parcela.description %}<p class="muted figura-desc">{{ pg.parcela.description }}</p>{% endif %}
+    {% endif %}
+    <div class="card-grid">
+      {% for order in pg.orders %}{{ order_card(order, loc_only=True) }}{% endfor %}
+    </div>
   </div>
+  {% endfor %}
 </section>
 {% endfor %}
 {% endblock %}
